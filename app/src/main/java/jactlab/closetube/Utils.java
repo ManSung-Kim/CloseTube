@@ -9,7 +9,7 @@ public class Utils {
 
     private static String psTag = "mstag";
 
-    static void logd(String in) {
+    public static void logd(String in) {
         if(StaticData.DGB_LEVEL == StaticData.DGB_LEVEL_1) {
             Log.d(psTag, in);
         }
