@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -17,6 +18,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import jactlab.closetube.R;
+import jactlab.closetube.StaticData;
 import jactlab.closetube.Utils;
 
 /**
@@ -60,14 +62,14 @@ public class StreamService extends Service {
         pmWParams.y = 100;
         //pmWParams.x = 0;
         //pmWParams.y = 0;
-        pmWParams.width = 500;
-        pmWParams.height = 500;
+        pmWParams.width = StaticData.WEBVIEW_WIDTH;
+        pmWParams.height = StaticData.WEBVIEW_HEIGHT;
 
         //
         pmMainLayout = new FrameLayout(this);
         FrameLayout.LayoutParams lmMainLayoutParam = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT);
-        lmMainLayoutParam.width = 500;
-        lmMainLayoutParam.height = 500;
+        lmMainLayoutParam.width = StaticData.WEBVIEW_WIDTH;
+        lmMainLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
         pmMainLayout.setLayoutParams(lmMainLayoutParam);
 
         //
@@ -78,8 +80,8 @@ public class StreamService extends Service {
         pmWebView.setLongClickable(false);
         pmWebView.setFocusableInTouchMode(false);
         LinearLayout.LayoutParams lmWebViewParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
-        lmWebViewParam.width = 500;
-        lmWebViewParam.height = 500;
+        lmWebViewParam.width = StaticData.WEBVIEW_WIDTH;
+        lmWebViewParam.height = StaticData.WEBVIEW_HEIGHT;
         pmWebView.setLayoutParams(lmWebViewParam);
         pmWebClient = new WebViewClient() {
             @Override
@@ -95,14 +97,14 @@ public class StreamService extends Service {
 
         pmTransLayout = new LinearLayout(this);
         LinearLayout.LayoutParams lmTransLayoutParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
-        lmTransLayoutParam.width = 500;
-        lmTransLayoutParam.height = 500;
+        lmTransLayoutParam.width = StaticData.WEBVIEW_WIDTH;
+        lmTransLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
         pmTransLayout.setLayoutParams(lmTransLayoutParam);
         pmTransLayout.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 Utils.logd("Touch Long");
-                pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
+               /* pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
                     @Override
                     public boolean onTouch(View v, MotionEvent event) {
                         Utils.logd("Touch : "+event.getAction());
@@ -118,10 +120,38 @@ public class StreamService extends Service {
                         }
                         return true;
                     }
-                });
+                });*/
                 return true;
             }
         });
+        pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Utils.logd("Touch : "+event.getAction());
+                if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                    long lmGenTime = SystemClock.uptimeMillis();
+                    generateMotionEvent(MotionEvent.ACTION_DOWN, lmGenTime);
+                    generateMotionEvent(MotionEvent.ACTION_UP, lmGenTime+StaticData.EVENT_GEN_ADD_TIME);
+
+                    pmDownInitX = event.getX();
+                    pmDownInitY = event.getY();
+                    //pmDownInitX =  pmTransLayout.getX();
+                    //pmDownInitY =  pmTransLayout.getY();
+                } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
+                   /* pmWParams.x = pmWParams.x + (int)(event.getX() - pmDownInitX);
+                    pmWParams.y = pmWParams.y + (int)(event.getY() - pmDownInitY);
+                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);*/
+                    Utils.logd("[X,Y]] "+event.getX()+" "+event.getY());
+                    pmWParams.x = (int)pmTransLayout.getX() + (int)(event.getX() - pmDownInitX);
+                    pmWParams.y = (int)pmTransLayout.getY() + (int)(event.getY() - pmDownInitY);
+                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);
+                } else if(event.getAction() == MotionEvent.ACTION_UP) {
+                    //pmTransLayout.setOnTouchListener(null);
+                }
+                return true;
+            }
+        });
+
         /*pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -167,6 +197,22 @@ public class StreamService extends Service {
         });
 
         pmWManager.addView(pmImageView, pmWParams);*/
+    }
+
+    private void generateMotionEvent(int action, long genTime) {
+        long lmDownT = genTime;
+        long lmEvtT = lmDownT + 100;
+        float lmEvtX = 250.0f;
+        float lmEvtY = 250.0f;
+        int lmMetaState = 0;
+        MotionEvent e = MotionEvent.obtain(
+                lmDownT,lmEvtT,
+                //MotionEvent.ACTION_DOWN,
+                action,
+                lmEvtX, lmEvtY,
+                lmMetaState
+        );
+        pmWebView.dispatchTouchEvent(e);
     }
 
     public void onDestroy() {
