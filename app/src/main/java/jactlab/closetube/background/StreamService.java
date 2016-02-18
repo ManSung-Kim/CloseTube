@@ -34,9 +34,17 @@ public class StreamService extends Service {
     private WebView pmWebView = null;
     private WebViewClient pmWebClient = null;
     private LinearLayout pmTransLayout = null;
+    private LinearLayout.LayoutParams pmTransLayoutParam = null;
 
+    //
     private float pmDownInitX = 0;
     private float pmDownInitY = 0;
+    private float pmMoveMainX = 0;
+    private float pmMoveMainY = 0;
+    private int pmInitDownX = 0;
+    private int pmInitDownY = 0;
+    private float pmInitDownRawX = 0;
+    private float pmInitDownRawY = 0;
 
     public void onCreate() {
         super.onCreate();
@@ -46,8 +54,8 @@ public class StreamService extends Service {
 
         // Layout Params
         pmWParams = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
                 //WindowManager.LayoutParams.TYPE_PHONE,
                 //WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 //PixelFormat.TRANSLUCENT
@@ -67,7 +75,7 @@ public class StreamService extends Service {
 
         //
         pmMainLayout = new FrameLayout(this);
-        FrameLayout.LayoutParams lmMainLayoutParam = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT);
+        FrameLayout.LayoutParams lmMainLayoutParam = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,FrameLayout.LayoutParams.WRAP_CONTENT);
         lmMainLayoutParam.width = StaticData.WEBVIEW_WIDTH;
         lmMainLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
         pmMainLayout.setLayoutParams(lmMainLayoutParam);
@@ -79,7 +87,7 @@ public class StreamService extends Service {
         pmWebView.setFocusable(false);
         pmWebView.setLongClickable(false);
         pmWebView.setFocusableInTouchMode(false);
-        LinearLayout.LayoutParams lmWebViewParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+        LinearLayout.LayoutParams lmWebViewParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT);
         lmWebViewParam.width = StaticData.WEBVIEW_WIDTH;
         lmWebViewParam.height = StaticData.WEBVIEW_HEIGHT;
         pmWebView.setLayoutParams(lmWebViewParam);
@@ -96,10 +104,10 @@ public class StreamService extends Service {
 
 
         pmTransLayout = new LinearLayout(this);
-        LinearLayout.LayoutParams lmTransLayoutParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
-        lmTransLayoutParam.width = StaticData.WEBVIEW_WIDTH;
-        lmTransLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
-        pmTransLayout.setLayoutParams(lmTransLayoutParam);
+        pmTransLayoutParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT);
+        pmTransLayoutParam.width = StaticData.WEBVIEW_WIDTH;
+        pmTransLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
+        pmTransLayout.setLayoutParams(pmTransLayoutParam);
         pmTransLayout.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -133,20 +141,17 @@ public class StreamService extends Service {
                     generateMotionEvent(MotionEvent.ACTION_DOWN, lmGenTime);
                     generateMotionEvent(MotionEvent.ACTION_UP, lmGenTime+StaticData.EVENT_GEN_ADD_TIME);
 
-                    pmDownInitX = event.getX();
-                    pmDownInitY = event.getY();
-                    //pmDownInitX =  pmTransLayout.getX();
-                    //pmDownInitY =  pmTransLayout.getY();
+                    pmInitDownX = pmWParams.x;
+                    pmInitDownY = pmWParams.y;
+                    pmInitDownRawX = event.getRawX();
+                    pmInitDownRawY = event.getRawY();
                 } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-                   /* pmWParams.x = pmWParams.x + (int)(event.getX() - pmDownInitX);
-                    pmWParams.y = pmWParams.y + (int)(event.getY() - pmDownInitY);
-                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);*/
                     Utils.logd("[X,Y]] "+event.getX()+" "+event.getY());
-                    pmWParams.x = (int)pmTransLayout.getX() + (int)(event.getX() - pmDownInitX);
-                    pmWParams.y = (int)pmTransLayout.getY() + (int)(event.getY() - pmDownInitY);
+                    pmWParams.x = pmInitDownX + (int)(event.getRawX() - pmInitDownRawX);
+                    pmWParams.y = pmInitDownY + (int)(event.getRawY() - pmInitDownRawY);
+
                     pmWManager.updateViewLayout(pmMainLayout, pmWParams);
                 } else if(event.getAction() == MotionEvent.ACTION_UP) {
-                    //pmTransLayout.setOnTouchListener(null);
                 }
                 return true;
             }
