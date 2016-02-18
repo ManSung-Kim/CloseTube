@@ -54,15 +54,17 @@ public class MainActivity extends Activity {
 
        pmService = new Intent(this, StreamService.class);
        startService(pmService);
+
+        finish();
     }
 
 
     public void onDestroy() {
         super.onDestroy();
-        if(pmService != null) {
+        /*if(pmService != null) {
             stopService(pmService);
             pmService = null;
-        }
+        }*/
     }
 
     protected void onPause() {

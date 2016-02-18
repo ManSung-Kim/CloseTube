@@ -7,6 +7,7 @@ import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -47,7 +48,15 @@ public class StreamService extends Service {
     private float pmInitDownRawX = 0;
     private float pmInitDownRawY = 0;
 
+    // web source
+    private static String pmWebVideoHash = "wxxb311BWRM";
+    private static String pmWebSource =
+            "<iframe " +
+                    "src=\"https://www.youtube.com/embed/" +
+                    pmWebVideoHash +
+                    "\" frameborder=\"0\" allowfullscreen></iframe>";
 
+    // long press gesture
     private static float pgLongTouchInitX = 0;
     private static float pgLongTouchInitY = 0;
     private static float pgLongTouchEndX = 0;
@@ -65,6 +74,7 @@ public class StreamService extends Service {
                     )
                ) {
                 Utils.logd("Long press");
+                ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(100);
                 pgTouchState = false;
                 pgLongTouchState = true;
             }
@@ -108,10 +118,14 @@ public class StreamService extends Service {
         //
         pmWebView = new WebView(this);
         pmWebView.getSettings().setJavaScriptEnabled(true);
+        pmWebView.getSettings().setLoadWithOverviewMode(true); // 크기 자동 조정
         pmWebView.setClickable(false);
         pmWebView.setFocusable(false);
         pmWebView.setLongClickable(false);
         pmWebView.setFocusableInTouchMode(false);
+        pmWebView.setHorizontalScrollBarEnabled(false);
+        pmWebView.setVerticalScrollBarEnabled(false);
+        pmWebView.setBackgroundColor(0);
         LinearLayout.LayoutParams lmWebViewParam = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT);
         lmWebViewParam.width = StaticData.WEBVIEW_WIDTH;
         lmWebViewParam.height = StaticData.WEBVIEW_HEIGHT;
@@ -150,7 +164,8 @@ public class StreamService extends Service {
         pmMainLayout.addView(pmTransLayout, pmWParams);
 
         pmWManager.addView(pmMainLayout, pmWParams);
-        pmWebView.loadUrl("https://www.youtube.com/watch?v=ufPTL-nbNs4");
+        //pmWebView.loadUrl("https://www.youtube.com/watch?v=ufPTL-nbNs4");
+        pmWebView.loadData(pmWebSource, "text/html","UTF-8");
 
     }
 
@@ -176,6 +191,24 @@ public class StreamService extends Service {
             pmWManager.removeView(pmImageView);
             pmImageView = null;
         }
+
+        if(pmTransLayout != null) {
+            pmMainLayout.removeView(pmTransLayout);
+            pmTransLayout = null;
+            Utils.logd("Delete transe layout");
+        }
+        if(pmWebView != null) {
+            pmWebView.loadUrl("about:blank");
+            pmMainLayout.removeView(pmWebView);
+            pmWebView = null;
+            Utils.logd("Delete webview layout");
+        }
+        if(pmMainLayout != null) {
+            pmWManager.removeView(pmMainLayout);
+            pmMainLayout = null;
+            Utils.logd("Delete main layout");
+        }
+
     }
 
     @Override
@@ -245,9 +278,15 @@ public class StreamService extends Service {
                 Utils.logd("Touch Up: "+event.getAction());
                 // for generate touch event
                 if(pgLongTouchState == false) {
+                    Utils.logd("Gen touch event[x,y]: ["+pmInitDownX+","+pmInitDownY+"]");
                     long lmGenTime = SystemClock.uptimeMillis();
-                    generateMotionEvent(pmInitDownX, pmInitDownY, MotionEvent.ACTION_DOWN, lmGenTime);
-                    generateMotionEvent(pmInitDownX, pmInitDownY, MotionEvent.ACTION_UP, lmGenTime + StaticData.EVENT_GEN_ADD_TIME);
+                    generateMotionEvent(pgLongTouchInitX, pgLongTouchInitY, MotionEvent.ACTION_DOWN, lmGenTime);
+                    generateMotionEvent(pgLongTouchInitX, pgLongTouchInitY, MotionEvent.ACTION_UP, lmGenTime + StaticData.EVENT_GEN_ADD_TIME);
+                } else if (pgLongTouchState == true) { // after long press
+                    if( pmWParams.y <50 ) {
+                        stopSelf();
+                        return false;
+                    }
                 }
 
                 removeLongPressData();
