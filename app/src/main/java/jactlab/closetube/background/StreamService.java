@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.view.Gravity;
@@ -45,6 +46,30 @@ public class StreamService extends Service {
     private int pmInitDownY = 0;
     private float pmInitDownRawX = 0;
     private float pmInitDownRawY = 0;
+
+
+    private static float pgLongTouchInitX = 0;
+    private static float pgLongTouchInitY = 0;
+    private static float pgLongTouchEndX = 0;
+    private static float pgLongTouchEndY = 0;
+    private static boolean pgTouchState = false;
+    private static boolean pgLongTouchState = false;
+    private final Handler pfmHandler = new Handler();
+    private Runnable pmRunnableLongPress = new Runnable() {
+        @Override
+        public void run() {
+            if(pgTouchState == true &&
+                    (
+                        Math.abs(pgLongTouchInitX-pgLongTouchEndX)<StaticData.LONG_PRESS_DISTANCE
+                        && Math.abs(pgLongTouchInitY-pgLongTouchEndY)<StaticData.LONG_PRESS_DISTANCE
+                    )
+               ) {
+                Utils.logd("Long press");
+                pgTouchState = false;
+                pgLongTouchState = true;
+            }
+        }
+    };
 
     public void onCreate() {
         super.onCreate();
@@ -108,70 +133,16 @@ public class StreamService extends Service {
         pmTransLayoutParam.width = StaticData.WEBVIEW_WIDTH;
         pmTransLayoutParam.height = StaticData.WEBVIEW_HEIGHT;
         pmTransLayout.setLayoutParams(pmTransLayoutParam);
-        pmTransLayout.setOnLongClickListener(new View.OnLongClickListener() {
+       /* pmTransLayout.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 Utils.logd("Touch Long");
-               /* pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
-                    @Override
-                    public boolean onTouch(View v, MotionEvent event) {
-                        Utils.logd("Touch : "+event.getAction());
-                        if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                            pmDownInitX = event.getX();
-                            pmDownInitY = event.getY();
-                        } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-                            pmWParams.x = pmWParams.x + (int)(event.getX() - pmDownInitX);
-                            pmWParams.y = pmWParams.y + (int)(event.getY() - pmDownInitY);
-                            pmWManager.updateViewLayout(pmMainLayout, pmWParams);
-                        } else if(event.getAction() == MotionEvent.ACTION_UP) {
-                            pmTransLayout.setOnTouchListener(null);
-                        }
-                        return true;
-                    }
-                });*/
-                return true;
-            }
-        });
-        pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                Utils.logd("Touch : "+event.getAction());
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    long lmGenTime = SystemClock.uptimeMillis();
-                    generateMotionEvent(MotionEvent.ACTION_DOWN, lmGenTime);
-                    generateMotionEvent(MotionEvent.ACTION_UP, lmGenTime+StaticData.EVENT_GEN_ADD_TIME);
-
-                    pmInitDownX = pmWParams.x;
-                    pmInitDownY = pmWParams.y;
-                    pmInitDownRawX = event.getRawX();
-                    pmInitDownRawY = event.getRawY();
-                } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-                    Utils.logd("[X,Y]] "+event.getX()+" "+event.getY());
-                    pmWParams.x = pmInitDownX + (int)(event.getRawX() - pmInitDownRawX);
-                    pmWParams.y = pmInitDownY + (int)(event.getRawY() - pmInitDownRawY);
-
-                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);
-                } else if(event.getAction() == MotionEvent.ACTION_UP) {
-                }
-                return true;
-            }
-        });
-
-        /*pmTransLayout.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                Utils.logd("Touch");
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    pmDownInitX = event.getX();
-                    pmDownInitY = event.getY();
-                } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-                    pmWParams.x = pmWParams.x + (int)(event.getX() - pmDownInitX);
-                    pmWParams.y = pmWParams.y + (int)(event.getY() - pmDownInitY);
-                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);
-                }
+                //pmTransLayout.setOnTouchListener(pmTouchMoveListener);
                 return true;
             }
         });*/
+        pmTransLayout.setOnTouchListener(pmTouchMoveListener);
+
 
         //pmMainLayout.addView(pmWebView, lmWebViewParam);
         pmMainLayout.addView(pmWebView, pmWParams);
@@ -181,43 +152,22 @@ public class StreamService extends Service {
         pmWManager.addView(pmMainLayout, pmWParams);
         pmWebView.loadUrl("https://www.youtube.com/watch?v=ufPTL-nbNs4");
 
-        /*
-
-        //
-        pmImageView = new ImageView(this);
-        pmImageView.setImageResource(R.drawable.ic_launcher);
-        pmImageView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                    pmDownInitX = event.getX();
-                    pmDownInitY = event.getY();
-                } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
-                     pmWParams.x = pmWParams.x + (int)(event.getX() - pmDownInitX);
-                     pmWParams.y = pmWParams.y + (int)(event.getY() - pmDownInitY);
-                     pmWManager.updateViewLayout(pmImageView, pmWParams);
-                 }
-                return true;
-            }
-        });
-
-        pmWManager.addView(pmImageView, pmWParams);*/
     }
 
-    private void generateMotionEvent(int action, long genTime) {
+    //private void generateMotionEvent(MotionEvent e, int action, long genTime) {
+    private void generateMotionEvent(float touchX, float touchY, int action, long genTime) {
         long lmDownT = genTime;
         long lmEvtT = lmDownT + 100;
-        float lmEvtX = 250.0f;
-        float lmEvtY = 250.0f;
+        float lmEvtX = touchX;
+        float lmEvtY = touchY;
         int lmMetaState = 0;
-        MotionEvent e = MotionEvent.obtain(
+        MotionEvent lmGenEvent = MotionEvent.obtain(
                 lmDownT,lmEvtT,
-                //MotionEvent.ACTION_DOWN,
                 action,
                 lmEvtX, lmEvtY,
                 lmMetaState
         );
-        pmWebView.dispatchTouchEvent(e);
+        pmWebView.dispatchTouchEvent(lmGenEvent);
     }
 
     public void onDestroy() {
@@ -239,5 +189,71 @@ public class StreamService extends Service {
 
         return START_STICKY;
     }
+
+    private void initLongPressProcessingData(float updateX, float updateY) {
+        pgLongTouchInitX = updateX;
+        pgLongTouchInitY = updateY;
+        pgLongTouchEndX = 0;
+        pgLongTouchEndY = 0;
+        pgTouchState = true; // is touch
+        pgLongTouchState = false; // false
+    }
+    private void setLongPressProcessingData(float updateX, float updateY) {
+        pgLongTouchEndX = updateX;
+        pgLongTouchEndY = updateY;
+    }
+    private void removeLongPressData() {
+        pgLongTouchInitX = 0;
+        pgLongTouchInitY = 0;
+        pgLongTouchEndX = 0;
+        pgLongTouchEndY = 0;
+        pgTouchState = false;
+        pgLongTouchState = false;
+    }
+
+    private View.OnTouchListener pmTouchMoveListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            //
+            if(event.getAction() == MotionEvent.ACTION_DOWN) {
+                Utils.logd("Touch Down: "+event.getAction());
+
+                // for Long press processing
+                initLongPressProcessingData(event.getX(), event.getY());
+
+                pfmHandler.postDelayed(pmRunnableLongPress, StaticData.LONG_PRESS_TIME);
+
+                //Utils.logd("[rawX,rawY] "+event.getX()+" "+event.getY());
+                pmInitDownX = pmWParams.x;
+                pmInitDownY = pmWParams.y;
+                pmInitDownRawX = event.getRawX();
+                pmInitDownRawY = event.getRawY();
+                //return false;
+            } else if(event.getAction() == MotionEvent.ACTION_MOVE) {
+                //Utils.logd("[X,Y]] "+event.getX()+" "+event.getY());
+
+                // for long press processing
+                setLongPressProcessingData(event.getX(), event.getY());
+
+                // for layout move
+                if(pgLongTouchState == true ) {
+                    pmWParams.x = pmInitDownX + (int) (event.getRawX() - pmInitDownRawX);
+                    pmWParams.y = pmInitDownY + (int) (event.getRawY() - pmInitDownRawY);
+                    pmWManager.updateViewLayout(pmMainLayout, pmWParams);
+                }
+            } else if(event.getAction() == MotionEvent.ACTION_UP) {
+                Utils.logd("Touch Up: "+event.getAction());
+                // for generate touch event
+                if(pgLongTouchState == false) {
+                    long lmGenTime = SystemClock.uptimeMillis();
+                    generateMotionEvent(pmInitDownX, pmInitDownY, MotionEvent.ACTION_DOWN, lmGenTime);
+                    generateMotionEvent(pmInitDownX, pmInitDownY, MotionEvent.ACTION_UP, lmGenTime + StaticData.EVENT_GEN_ADD_TIME);
+                }
+
+                removeLongPressData();
+            }
+            return true;
+        }
+    };
 
 }

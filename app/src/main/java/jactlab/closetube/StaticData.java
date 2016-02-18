@@ -13,4 +13,6 @@ public class StaticData {
     public static final int WEBVIEW_HEIGHT = 600;
 
     public static final int EVENT_GEN_ADD_TIME = 200;
+    public static final int LONG_PRESS_TIME = 500;
+    public static final float LONG_PRESS_DISTANCE = 30;
 }
